@@ -1,0 +1,2 @@
+# Private media directory - confidential uploaded files stored here
+# Protected from direct public/static HTTP serving

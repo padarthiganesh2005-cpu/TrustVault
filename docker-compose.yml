@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    container_name: trustvault_web
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --access-logfile - config.wsgi:application"
+    volumes:
+      - .:/app
+      - private_media_data:/app/private_media
+      - static_data:/app/staticfiles
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-1*(dd4!-4m0-3$ksswf!iz5hn0_^o*lgd+uah@)!t(!$$gd6-)}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,web}
+    ports:
+      - "8000:8000"
+
+volumes:
+  private_media_data:
+  static_data:

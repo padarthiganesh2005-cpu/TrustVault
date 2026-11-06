@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Viewer Portal – TrustVault{% endblock %}
+{% block page_heading %}Shared With Me{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 col-md-4">
+        <div class="metric-card">
+            <div class="metric-title"><i class="bi bi-file-earmark-check text-primary me-1"></i> Accessible Documents</div>
+            <div class="metric-value">{{ total_shared }}</div>
+            <div class="small text-secondary mt-1">Shared with your account</div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="mb-0 fw-bold">Authorized Document Catalog</h6>
+        <small class="text-secondary">Only documents explicitly granted to your identity are displayed</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Owner</th>
+                        <th>Category</th>
+                        <th>Permission</th>
+                        <th>Granted Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for perm in shared_permissions %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'documents:detail' perm.document.id %}" class="fw-bold text-dark text-decoration-none">
+                                <i class="bi bi-file-earmark-text text-primary me-2"></i>{{ perm.document.name }}
+                            </a>
+                            <div class="text-secondary small ms-4">{{ perm.document.original_filename }} ({{ perm.document.formatted_size }})</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ perm.document.owner.username }}</span>
+                        </td>
+                        <td>
+                            {% if perm.document.category %}
+                            <span class="badge bg-light text-secondary border">{{ perm.document.category.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if perm.permission_type == 'EDIT' %}
+                            <span class="badge badge-perm-edit"><i class="bi bi-pencil me-1"></i> Edit & Download</span>
+                            {% else %}
+                            <span class="badge badge-perm-read"><i class="bi bi-eye me-1"></i> Read & Download</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">{{ perm.granted_at|date:"M d, Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'documents:detail' perm.document.id %}" class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-info-circle"></i> Details
+                            </a>
+                            <a href="{% url 'documents:download' perm.document.id %}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-download me-1"></i> Download
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check text-secondary" style="font-size: 2.5rem;"></i>
+                            <div class="mt-2 fw-semibold">No Documents Shared With You Yet</div>
+                            <p class="small text-secondary mb-0">When document owners grant you access, their documents will appear here.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Audit Trail – TrustVault{% endblock %}
+{% block page_heading %}Cryptographic Audit Trail & Forensic Ledger{% endblock %}
+
+{% block content %}
+<!-- Cryptographic Hash Chain Verification Banner -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-navy text-white" style="background-color: #0F172A;">
+    <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h5 class="fw-bold mb-1 text-white d-flex align-items-center">
+                    <i class="bi bi-link-45deg text-info me-2 fs-4"></i> Immutable SHA-256 Hash Chain
+                </h5>
+                <p class="text-secondary small mb-0">
+                    Formula: <code>current_hash = SHA-256(previous_hash + canonical_event_data)</code>. Tampering with any log breaks subsequent links.
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'audit:dashboard' %}?verify=1" class="btn btn-primary">
+                    <i class="bi bi-shield-check me-1"></i> Run Chain Integrity Check
+                </a>
+            </div>
+        </div>
+
+        {% if chain_verification %}
+        <div class="mt-4 pt-3 border-top border-secondary">
+            {% if chain_verification.is_valid %}
+            <div class="alert alert-success d-flex align-items-center mb-0" role="alert">
+                <i class="bi bi-check-circle-fill fs-4 me-3 text-success"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">Audit Chain Cryptographically Valid!</h6>
+                    <p class="mb-0 small">{{ chain_verification.details }} ({{ chain_verification.total_records }} records verified)</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-danger d-flex align-items-center mb-0" role="alert">
+                <i class="bi bi-exclamation-octagon-fill fs-4 me-3 text-danger"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">TAMPERING DETECTED IN AUDIT LEDGER!</h6>
+                    <p class="mb-0 small">{{ chain_verification.details }} (Discrepancy at Record #{{ chain_verification.corrupted_at }})</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Audit Filters -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-12 col-md-3">
+                <input type="text" name="actor" class="form-control" placeholder="Filter by actor username..." value="{{ selected_actor }}">
+            </div>
+            <div class="col-6 col-md-4">
+                <select name="event_type" class="form-select">
+                    <option value="">All Event Types</option>
+                    {% for val, label in event_types %}
+                    <option value="{{ val }}" {% if selected_event_type == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <select name="result" class="form-select">
+                    <option value="">All Results</option>
+                    {% for val, label in results %}
+                    <option value="{{ val }}" {% if selected_result == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-navy flex-grow-1">Filter</button>
+                <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary" title="Clear Filters"><i class="bi bi-x-circle"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Audit Ledger Table -->
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold">Audit Event Ledger ({{ logs.count }})</h6>
+        <span class="badge bg-light text-secondary border">Append-Only</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>Seq #</th>
+                        <th>Event Type</th>
+                        <th>Actor</th>
+                        <th>Target / Doc</th>
+                        <th>Result</th>
+                        <th>IP Address</th>
+                        <th>Current SHA-256 Hash</th>
+                        <th>Timestamp (UTC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="fw-bold text-secondary">#{{ log.sequence_number }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ log.get_event_type_display }}</div>
+                            <small class="text-muted">{{ log.event_type }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ log.actor_username }}</span>
+                            {% if log.actor_role %}
+                            <span class="badge bg-secondary-subtle text-secondary ms-1">{{ log.actor_role }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.document_name %}
+                            <div class="text-truncate" style="max-width: 160px;" title="{{ log.document_name }}">
+                                <i class="bi bi-file-earmark text-secondary me-1"></i>{{ log.document_name }}
+                            </div>
+                            {% endif %}
+                            {% if log.target_username %}
+                            <div class="small text-secondary">
+                                <i class="bi bi-arrow-right-short text-primary"></i> Target: <strong>{{ log.target_username }}</strong>
+                            </div>
+                            {% endif %}
+                            {% if not log.document_name and not log.target_username %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.action_result == 'SUCCESS' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">SUCCESS</span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">DENIED</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ log.ip_address|default:"—" }}</code></td>
+                        <td>
+                            <span class="hash-mono copy-hash-btn cursor-pointer" data-hash="{{ log.current_hash }}" title="Click to copy full hash: {{ log.current_hash }}">
+                                {{ log.current_hash|slice:":10" }}... <i class="bi bi-clipboard ms-1"></i>
+                            </span>
+                        </td>
+                        <td class="text-secondary small">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">No audit events match your filter.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

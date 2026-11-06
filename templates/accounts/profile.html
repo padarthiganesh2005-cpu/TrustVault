@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Profile – TrustVault{% endblock %}
+{% block page_heading %}User Profile & Security Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 col-md-4 mb-4">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex p-3 rounded-circle bg-light text-primary mb-3">
+                    <i class="bi bi-person-circle" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="fw-bold mb-1">{{ user.username }}</h5>
+                <p class="text-secondary small mb-3">{{ user.email }}</p>
+
+                <div class="mb-3">
+                    <span class="badge {% if user.is_admin_role %}badge-role-admin{% elif user.is_owner_role %}badge-role-owner{% else %}badge-role-viewer{% endif %} p-2">
+                        <i class="bi bi-shield-check me-1"></i> {{ user.get_role_display }}
+                    </span>
+                </div>
+
+                <ul class="list-group list-group-flush text-start small mt-4">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-secondary">Department</span>
+                        <span class="fw-semibold">{{ user.department|default:"General" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-secondary">Account Status</span>
+                        <span class="badge bg-success">Active</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-secondary">Member Since</span>
+                        <span class="fw-semibold">{{ user.date_joined|date:"M d, Y" }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-8">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold">Edit Profile Information</h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold small">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold small">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Email Address</label>
+                        {{ form.email }}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small">Department</label>
+                        {{ form.department }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

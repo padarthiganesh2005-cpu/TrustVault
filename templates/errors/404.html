@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}404 Not Found – TrustVault{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6">
+            <div class="p-4 rounded-circle d-inline-flex bg-light text-secondary mb-3">
+                <i class="bi bi-question-diamond-fill" style="font-size: 3.5rem;"></i>
+            </div>
+            <h2 class="fw-bold text-dark mt-2">Resource Not Found (404)</h2>
+            <p class="text-secondary lead">
+                The requested document, page, or resource does not exist or is unavailable.
+            </p>
+            <div class="mt-4">
+                <a href="{% url 'dashboard:index' %}" class="btn btn-primary">
+                    <i class="bi bi-house me-1"></i> Return to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

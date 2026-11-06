@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ document.name }} – TrustVault{% endblock %}
+{% block page_heading %}Document Details & Access Control{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Left Column: Document Metadata & Version Management -->
+    <div class="col-12 col-lg-7 mb-4">
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0 fw-bold text-dark">{{ document.name }}</h5>
+                    <small class="text-secondary">Vault ID: <code>{{ document.id }}</code></small>
+                </div>
+                <div>
+                    <a href="{% url 'documents:download' document.id %}" class="btn btn-primary shadow-sm">
+                        <i class="bi bi-download me-1"></i> Secure Download
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                {% if document.description %}
+                <div class="mb-4">
+                    <label class="text-secondary small fw-bold text-uppercase">Description</label>
+                    <p class="text-dark mb-0">{{ document.description }}</p>
+                </div>
+                {% endif %}
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-4">
+                        <label class="text-secondary small fw-bold text-uppercase">Category</label>
+                        <div>
+                            {% if document.category %}
+                            <span class="badge bg-light text-secondary border">{{ document.category.name }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="text-secondary small fw-bold text-uppercase">Owner</label>
+                        <div><span class="badge bg-light text-dark border">{{ document.owner.username }}</span></div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="text-secondary small fw-bold text-uppercase">Version</label>
+                        <div><span class="badge bg-secondary-subtle text-secondary">v{{ document.version }}</span></div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="text-secondary small fw-bold text-uppercase">File Size</label>
+                        <div>{{ document.formatted_size }}</div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="text-secondary small fw-bold text-uppercase">Original Filename</label>
+                        <div class="text-truncate" style="max-width: 180px;">{{ document.original_filename }}</div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="text-secondary small fw-bold text-uppercase">Uploaded</label>
+                        <div>{{ document.created_at|date:"M d, Y H:i" }} UTC</div>
+                    </div>
+                </div>
+
+                <!-- Integrity Hash Box -->
+                <div class="bg-light p-3 rounded-3 border mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-bold text-secondary text-uppercase"><i class="bi bi-fingerprint text-primary me-1"></i> SHA-256 Integrity Hash</span>
+                        <button class="btn btn-xs btn-outline-secondary copy-hash-btn" data-hash="{{ document.file_hash }}">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </div>
+                    <code class="text-dark small text-break">{{ document.file_hash }}</code>
+                </div>
+
+                {% if document.tag_list %}
+                <div class="mb-4">
+                    <label class="text-secondary small fw-bold text-uppercase">Tags</label>
+                    <div>
+                        {% for t in document.tag_list %}
+                        <span class="badge bg-light text-secondary border me-1">{{ t }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Actions for Owner & Editor -->
+                <div class="d-flex flex-wrap gap-2 pt-3 border-top">
+                    {% if is_editor %}
+                    <a href="{% url 'documents:edit' document.id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-pencil me-1"></i> Edit Metadata
+                    </a>
+                    {% endif %}
+
+                    {% if is_owner %}
+                    <form method="post" action="{% url 'documents:delete' document.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="Are you sure you want to soft-delete this document?">
+                            <i class="bi bi-trash me-1"></i> Delete Document
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <a href="{% url 'audit:document_audit' document.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-shield-check me-1"></i> Document Audit Trail
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Version History Card -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Version History ({{ versions.count }})</h6>
+                {% if is_editor %}
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#uploadVersionCollapse">
+                    <i class="bi bi-plus-circle me-1"></i> Upload Replacement Version
+                </button>
+                {% endif %}
+            </div>
+
+            {% if is_editor %}
+            <div class="collapse p-4 border-bottom bg-light" id="uploadVersionCollapse">
+                <h6 class="fw-bold mb-3">Upload Replacement Version</h6>
+                <form method="post" action="{% url 'documents:replace_version' document.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">New Document File</label>
+                        {{ version_form.file }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Change Summary</label>
+                        {{ version_form.change_summary }}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Save New Version
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>Version</th>
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Uploaded By</th>
+                                <th>Date</th>
+                                <th class="text-end">Download</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in versions %}
+                            <tr>
+                                <td><span class="badge bg-secondary-subtle text-secondary">v{{ v.version_number }}</span></td>
+                                <td>{{ v.original_filename }}</td>
+                                <td class="text-secondary small">{{ v.formatted_size }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ v.uploaded_by.username }}</span></td>
+                                <td class="text-secondary small">{{ v.created_at|date:"M d, Y" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'documents:download' document.id %}?version={{ v.version_number }}" class="btn btn-xs btn-outline-primary">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Document Permissions & Instant Revocation -->
+    <div class="col-12 col-lg-5">
+        {% if is_owner %}
+        <!-- Grant Permission Card -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold text-dark">
+                    <i class="bi bi-person-plus-fill text-primary me-1"></i> Grant Document Access
+                </h6>
+                <small class="text-secondary">Explicit authorization required for all viewers</small>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" action="{% url 'sharing:grant' document.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Select User</label>
+                        {{ grant_form.user }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Permission Level</label>
+                        {{ grant_form.permission_type }}
+                        <div class="form-text small text-muted">
+                            <strong>Read:</strong> View metadata and download.<br>
+                            <strong>Edit:</strong> View, download, modify metadata, replace versions.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-shield-plus me-1"></i> Authorize User
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Active Permissions Roster -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 fw-bold">Active Authorizations ({{ active_permissions.count }})</h6>
+                    <small class="text-secondary">Zero-trust: access terminates the instant revoked</small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>Authorized User</th>
+                                <th>Level</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for perm in active_permissions %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ perm.user.username }}</div>
+                                    <div class="text-secondary small">{{ perm.user.email }}</div>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'sharing:update' perm.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        {% if perm.permission_type == 'READ' %}
+                                        <input type="hidden" name="permission_type" value="EDIT">
+                                        <button type="submit" class="badge badge-perm-read border-0 text-start" title="Click to elevate to EDIT">
+                                            READ <i class="bi bi-arrow-up-circle ms-1"></i>
+                                        </button>
+                                        {% else %}
+                                        <input type="hidden" name="permission_type" value="READ">
+                                        <button type="submit" class="badge badge-perm-edit border-0 text-start" title="Click to demote to READ">
+                                            EDIT <i class="bi bi-arrow-down-circle ms-1"></i>
+                                        </button>
+                                        {% endif %}
+                                    </form>
+                                </td>
+                                <td class="text-end">
+                                    <form method="post" action="{% url 'sharing:revoke' perm.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-xs btn-outline-danger" data-confirm="Revoking access from '{{ perm.user.username }}' takes effect immediately on the server. All future attempts by this user to view or download the document will be denied. Proceed?">
+                                            <i class="bi bi-x-octagon"></i> Revoke
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted small">
+                                    No external users authorized yet.<br>This document is strictly confidential to you.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permission History Transition Log -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold small text-uppercase text-secondary">Permission State Transitions</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush small">
+                    {% for h in permission_history %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ h.target_user.username }}</strong>
+                            <span class="text-secondary">— {{ h.action }}</span>
+                            <div class="text-muted" style="font-size: 0.75rem;">{{ h.notes }}</div>
+                        </div>
+                        <span class="text-secondary" style="font-size: 0.75rem;">{{ h.timestamp|timesince }} ago</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted text-center py-3">No permission transitions recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <!-- Non-owner info card -->
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-light">
+            <h6 class="fw-bold mb-2"><i class="bi bi-shield-lock-fill text-primary me-1"></i> Access Summary</h6>
+            <p class="small text-secondary mb-3">You have been granted access to this document by the owner <strong>{{ document.owner.username }}</strong>.</p>
+            <div class="p-3 bg-white rounded border small">
+                <div class="mb-2"><strong>Your Status:</strong> <span class="badge bg-success">Authorized</span></div>
+                <div><strong>Permission Level:</strong>
+                    {% if is_editor %}
+                    <span class="badge badge-perm-edit">EDIT</span>
+                    {% else %}
+                    <span class="badge badge-perm-read">READ</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

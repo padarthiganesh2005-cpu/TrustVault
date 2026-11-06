@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Owner Dashboard – TrustVault{% endblock %}
+{% block page_heading %}Document Owner Portal{% endblock %}
+
+{% block content %}
+<!-- Quick Actions & Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="metric-card">
+            <div class="metric-title"><i class="bi bi-file-earmark-lock text-primary me-1"></i> My Documents</div>
+            <div class="metric-value">{{ total_owned }}</div>
+            <div class="small text-secondary mt-1">Uploaded confidential assets</div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="metric-card">
+            <div class="metric-title"><i class="bi bi-people text-info me-1"></i> Active Grants</div>
+            <div class="metric-value">{{ total_active_grants }}</div>
+            <div class="small text-secondary mt-1">Active user permissions</div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="metric-card">
+            <div class="metric-title"><i class="bi bi-download text-success me-1"></i> Authorized Downloads</div>
+            <div class="metric-value">{{ recent_downloads.count }}</div>
+            <div class="small text-secondary mt-1">Recent document downloads</div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="metric-card border-danger-subtle bg-danger-subtle bg-opacity-10">
+            <div class="metric-title text-danger"><i class="bi bi-shield-x text-danger me-1"></i> Denied Attempts</div>
+            <div class="metric-value text-danger">{{ recent_denied.count }}</div>
+            <div class="small text-danger mt-1">Blocked access on your files</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Shortcuts -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'documents:upload' %}" class="btn btn-primary shadow-sm">
+        <i class="bi bi-cloud-arrow-up me-1"></i> Upload New Document
+    </a>
+    <a href="{% url 'documents:list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-search me-1"></i> Search & Browse Vault
+    </a>
+    <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-clock-history me-1"></i> View Document Audit Trail
+    </a>
+</div>
+
+<!-- My Owned Documents List -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="mb-0 fw-bold">My Confidential Documents</h6>
+            <small class="text-secondary">Manage permissions and view version histories</small>
+        </div>
+        <a href="{% url 'documents:list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Document Name</th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Version</th>
+                        <th>Uploaded</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in owned_docs %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'documents:detail' doc.id %}" class="fw-bold text-dark text-decoration-none">
+                                <i class="bi bi-file-earmark-text text-primary me-2"></i>{{ doc.name }}
+                            </a>
+                            <div class="text-secondary small ms-4">{{ doc.original_filename }}</div>
+                        </td>
+                        <td>
+                            {% if doc.category %}
+                            <span class="badge bg-light text-secondary border">{{ doc.category.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">{{ doc.formatted_size }}</td>
+                        <td><span class="badge bg-secondary-subtle text-secondary">v{{ doc.version }}</span></td>
+                        <td class="text-secondary small">{{ doc.created_at|date:"M d, Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'documents:detail' doc.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="bi bi-shield-lock"></i> Permissions
+                            </a>
+                            <a href="{% url 'documents:download' doc.id %}" class="btn btn-sm btn-success">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            You have not uploaded any documents yet.
+                            <a href="{% url 'documents:upload' %}" class="d-block mt-2 text-primary">Upload your first document</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Access & Denied Attempts Split Row -->
+<div class="row g-4">
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-check2-circle text-success me-1"></i> Recent Downloads on My Documents</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>User</th>
+                                <th>Document</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in recent_downloads %}
+                            <tr>
+                                <td class="fw-semibold">{{ d.actor_username }}</td>
+                                <td class="text-truncate" style="max-width: 160px;">{{ d.document_name }}</td>
+                                <td class="text-secondary">{{ d.timestamp|timesince }} ago</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-3 text-muted">No recent downloads.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-shield-slash text-danger me-1"></i> Recent Denied Access Attempts</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>Attempted By</th>
+                                <th>Document</th>
+                                <th>IP</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in recent_denied %}
+                            <tr>
+                                <td class="fw-semibold text-danger">{{ a.actor_username }}</td>
+                                <td class="text-truncate" style="max-width: 140px;">{{ a.document_name }}</td>
+                                <td><code>{{ a.ip_address }}</code></td>
+                                <td class="text-secondary">{{ a.timestamp|timesince }} ago</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-3 text-muted">No unauthorized attempts detected.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

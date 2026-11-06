@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Documents – TrustVault{% endblock %}
+{% block page_heading %}Vault Documents{% endblock %}
+
+{% block content %}
+<!-- Filter & Search Bar -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-secondary"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0" placeholder="Search by title, tag, owner..." value="{{ selected_q }}">
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <select name="category" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <select name="ext" class="form-select">
+                    <option value="">All Formats</option>
+                    <option value=".pdf" {% if selected_ext == '.pdf' %}selected{% endif %}>PDF (.pdf)</option>
+                    <option value=".docx" {% if selected_ext == '.docx' %}selected{% endif %}>Word (.docx)</option>
+                    <option value=".xlsx" {% if selected_ext == '.xlsx' %}selected{% endif %}>Excel (.xlsx)</option>
+                    <option value=".txt" {% if selected_ext == '.txt' %}selected{% endif %}>Text (.txt)</option>
+                    <option value=".png" {% if selected_ext == '.png' %}selected{% endif %}>PNG Image</option>
+                    <option value=".jpg" {% if selected_ext == '.jpg' %}selected{% endif %}>JPEG Image</option>
+                    <option value=".csv" {% if selected_ext == '.csv' %}selected{% endif %}>CSV (.csv)</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <select name="date" class="form-select">
+                    <option value="">Any Time</option>
+                    <option value="today" {% if selected_date == 'today' %}selected{% endif %}>Today</option>
+                    <option value="7days" {% if selected_date == '7days' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30days" {% if selected_date == '30days' %}selected{% endif %}>Last 30 Days</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-navy flex-grow-1">Filter</button>
+                <a href="{% url 'documents:list' %}" class="btn btn-outline-secondary" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Documents List Table -->
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="mb-0 fw-bold">Authorized Documents ({{ documents.count }})</h6>
+            <small class="text-secondary">Direct database-enforced authorization view</small>
+        </div>
+        {% if user.is_owner_role or user.is_admin_role %}
+        <a href="{% url 'documents:upload' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-cloud-arrow-up me-1"></i> Upload Document
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Title & Original Filename</th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Format</th>
+                        <th>Owner</th>
+                        <th>Version</th>
+                        <th>Uploaded</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'documents:detail' doc.id %}" class="fw-bold text-dark text-decoration-none">
+                                <i class="bi bi-file-earmark-text text-primary me-2"></i>{{ doc.name }}
+                            </a>
+                            <div class="text-secondary small ms-4">{{ doc.original_filename }}</div>
+                            {% if doc.tag_list %}
+                            <div class="ms-4 mt-1">
+                                {% for tag in doc.tag_list %}
+                                <span class="badge bg-light text-secondary border me-1">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc.category %}
+                            <span class="badge bg-light text-secondary border">{{ doc.category.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">{{ doc.formatted_size }}</td>
+                        <td><code>{{ doc.file_extension|upper }}</code></td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ doc.owner.username }}</span>
+                        </td>
+                        <td><span class="badge bg-secondary-subtle text-secondary">v{{ doc.version }}</span></td>
+                        <td class="text-secondary small">{{ doc.created_at|date:"M d, Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'documents:detail' doc.id %}" class="btn btn-sm btn-outline-secondary me-1" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'documents:download' doc.id %}" class="btn btn-sm btn-primary" title="Secure Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-folder-x text-secondary" style="font-size: 2.5rem;"></i>
+                            <div class="mt-2 fw-semibold">No Documents Found</div>
+                            <p class="small text-secondary mb-0">Try adjusting your search criteria or uploading a document.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

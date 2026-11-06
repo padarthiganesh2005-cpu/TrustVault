@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Security Events – TrustVault{% endblock %}
+{% block page_heading %}Security Anomaly Detection & Alerts{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="mb-0 fw-bold">Automated Security Alerts ({{ events.count }})</h6>
+            <small class="text-secondary">Triggers based on access bursts, brute force, and IDOR probes</small>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Alert Type</th>
+                        <th>Actor</th>
+                        <th>IP Address</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Timestamp</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ev in events %}
+                    <tr>
+                        <td>
+                            <span class="badge {% if ev.severity == 'CRITICAL' %}bg-danger{% elif ev.severity == 'HIGH' %}bg-warning text-dark{% elif ev.severity == 'MEDIUM' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                {{ ev.severity }}
+                            </span>
+                        </td>
+                        <td class="fw-bold">{{ ev.event_type }}</td>
+                        <td>{{ ev.actor_username|default:"ANONYMOUS" }}</td>
+                        <td><code>{{ ev.ip_address|default:"—" }}</code></td>
+                        <td>{{ ev.description }}</td>
+                        <td>
+                            {% if ev.is_resolved %}
+                            <span class="badge bg-success-subtle text-success">Resolved</span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger">Active</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">{{ ev.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="text-end">
+                            {% if not ev.is_resolved %}
+                            <form method="post" action="{% url 'audit:resolve_event' ev.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success">Mark Resolved</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">Closed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check text-success" style="font-size: 2.5rem;"></i>
+                            <div class="mt-2 fw-semibold">No Security Alerts</div>
+                            <p class="small text-secondary mb-0">System operational integrity is normal.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}500 Internal Error – TrustVault{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6">
+            <div class="p-4 rounded-circle d-inline-flex bg-warning-subtle text-warning mb-3">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size: 3.5rem;"></i>
+            </div>
+            <h2 class="fw-bold text-dark mt-2">Server Error (500)</h2>
+            <p class="text-secondary lead">
+                An unexpected condition was encountered. Our security monitoring service has logged this occurrence.
+            </p>
+            <div class="mt-4">
+                <a href="{% url 'dashboard:index' %}" class="btn btn-primary">
+                    <i class="bi bi-house me-1"></i> Return to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
